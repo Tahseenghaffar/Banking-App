@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MADE BY TAHSEEN ABDUL GHAFFAR</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Giftah Banking System</h1>
+        <div id="registerForm">
+            <h2>Registration</h2>
+            <form id="registerFormElement">
+                <div class="form-group">
+                    <label for="regUsername">Username</label>
+                    <input type="text" class="form-control" id="regUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" class="form-control" id="regEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input type="password" class="form-control" id="regPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+                <button type="button" class="btn btn-link" onclick="showLoginForm()">Login</button>
+            </form>
+        </div>
+        <div id="loginForm" style="display: none;">
+            <h2>Login</h2>
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" class="form-control" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <button type="button" class="btn btn-link" onclick="showRegisterForm()">Register</button>
+            </form>
+        </div>
+        <div id="dashboard" style="display: none;">
+            <h2>Welcome, <span id="loggedInUsername"></span>!</h2>
+            <button id="logoutBtn" class="btn btn-danger">Logout</button>
+            <hr>
+            <div id="balanceDiv">
+                <h3>Balance: <span id="balance"></span></h3>
+                <button id="depositBtn" class="btn btn-success">Deposit</button>
+                <button id="withdrawBtn" class="btn btn-warning">Withdraw</button>
+            </div>
+            <hr>
+            <div id="transferDiv">
+                <h3>Transfer Balance</h3>
+                <div class="form-group">
+                    <label for="recipient">Recipient Username</label>
+                    <input type="text" class="form-control" id="recipient" required>
+                </div>
+                <div class="form-group">
+                    <label for="transferAmount">Amount</label>
+                    <input type="number" class="form-control" id="transferAmount" required>
+                </div>
+                <button id="transferBtn" class="btn btn-primary">Transfer</button>
+            </div>
+            <hr>
+            <div id="transactionHistoryDiv">
+                <h3>Transaction History</h3>
+                <ul id="transactionList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Function to handle registration
+        function register(username, email, password) {
+            // Check if user already exists
+            if (localStorage.getItem(username)) {
+                alert("User already exists!");
+                return;
+            }
+            // Save user data
+            localStorage.setItem(username, JSON.stringify({ email: email, password: password, balance: 0, transactions: [] }));
+            alert("Registration successful!");
+            $('#registerForm').hide();
+            $('#loginForm').show();
+        }
+
+        // Function to handle login
+        function login(username, password) {
+            const userData = JSON.parse(localStorage.getItem(username));
+            if (userData && userData.password === password) {
+                // Login successful
+                $('#loginForm').hide();
+                $('#dashboard').show();
+                $('#loggedInUsername').text(username);
+                $('#balance').text(userData.balance);
+                // Display transaction history
+                displayTransactionHistory(username);
+            } else {
+                alert("Invalid username or password!");
+            }
+        }
+
+        // Function to handle logout
+        function logout() {
+            $('#loginFormElement')[0].reset();
+            $('#dashboard').hide();
+            $('#registerForm').hide();
+            $('#loginForm').show();
+        }
+
+        // Function to handle deposit
+        function deposit(username, amount) {
+            const userData = JSON.parse(localStorage.getItem(username));
+            userData.balance += amount;
+            localStorage.setItem(username, JSON.stringify(userData));
+            $('#balance').text(userData.balance);
+            // Update transaction history
+            userData.transactions.push({ type: 'Deposit', amount: amount });
+            localStorage.setItem(username, JSON.stringify(userData));
+            displayTransactionHistory(username);
+        }
+
+        // Function to handle withdrawal
+        function withdraw(username, amount) {
+            const userData = JSON.parse(localStorage.getItem(username));
+            if (userData.balance >= amount) {
+                userData.balance -= amount;
+                localStorage.setItem(username, JSON.stringify(userData));
+                $('#balance').text(userData.balance);
+                // Update transaction history
+                userData.transactions.push({ type: 'Withdrawal', amount: amount });
+                localStorage.setItem(username, JSON.stringify(userData));
+                displayTransactionHistory(username);
+            } else {
+                alert("Insufficient balance!");
+            }
+        }
+
+        // Function to display transaction history
+        function displayTransactionHistory(username) {
+            const userData = JSON.parse(localStorage.getItem(username));
+            const transactionList = $('#transactionList');
+            transactionList.empty();
+            userData.transactions.forEach(transaction => {
+                transactionList.append(`<li>${transaction.type}: ${transaction.amount}</li>`);
+            });
+        }
+
+        // Function to handle transferring balance to another user
+        function transferBalance(sender, recipient, amount) {
+            const senderData = JSON.parse(localStorage.getItem(sender));
+            const recipientData = JSON.parse(localStorage.getItem(recipient));
+            if (senderData.balance >= amount) {
+                senderData.balance -= amount;
+                recipientData.balance += amount;
+                localStorage.setItem(sender, JSON.stringify(senderData));
+                localStorage.setItem(recipient, JSON.stringify(recipientData));
+                $('#balance').text(senderData.balance);
+                alert("Transfer successful!");
+                // Update transaction history for sender and recipient
+                senderData.transactions.push({ type: 'Transfer to ' + recipient, amount: -amount });
+                recipientData.transactions.push({ type: 'Transfer from ' + sender, amount: amount });
+                localStorage.setItem(sender, JSON.stringify(senderData));
+                localStorage.setItem(recipient, JSON.stringify(recipientData));
+                displayTransactionHistory(sender);
+            } else {
+                alert("Insufficient balance!");
+            }
+        }
+
+        // Function to show registration form and hide login form
+        function showRegisterForm() {
+            $('#loginForm').hide();
+            $('#registerForm').show();
+        }
+
+        // Function to show login form and hide registration form
+        function showLoginForm() {
+            $('#registerForm').hide();
+            $('#loginForm').show();
+        }
+
+        // Event listeners
+        $(document).ready(function() {
+            // Registration form submission
+            $('#registerFormElement').submit(function(e) {
+                e.preventDefault();
+                const username = $('#regUsername').val();
+                const email = $('#regEmail').val();
+                const password = $('#regPassword').val();
+                register(username, email, password);
+            });
+
+            // Login form submission
+            $('#loginFormElement').submit(function(e) {
+                e.preventDefault();
+                const username = $('#username').val();
+                const password = $('#password').val();
+                login(username, password);
+            });
+
+            // Logout button click
+            $('#logoutBtn').click(function() {
+                logout();
+            });
+
+            // Deposit button click
+            $('#depositBtn').click(function() {
+                const amount = parseFloat(prompt("Enter deposit amount:"));
+                const username = $('#loggedInUsername').text();
+                deposit(username, amount);
+            });
+
+            // Withdraw button click
+            $('#withdrawBtn').click(function() {
+                const amount = parseFloat(prompt("Enter withdrawal amount:"));
+                const username = $('#loggedInUsername').text();
+                withdraw(username, amount);
+            });
+
+            // Transfer button click
+            $('#transferBtn').click(function() {
+                const recipient = $('#recipient').val();
+                const amount = parseFloat($('#transferAmount').val());
+                const sender = $('#loggedInUsername').text();
+                transferBalance(sender, recipient, amount);
+            });
+        });
+    </script>
+</body>
+</html>
